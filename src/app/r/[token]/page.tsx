@@ -136,7 +136,7 @@ export default function RoomRetrievalPage({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `tempdrop-${data?.id.slice(0, 8) || "files"}.zip`;
+      a.download = `doingdrop-${data?.id.slice(0, 8) || "files"}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -168,14 +168,14 @@ export default function RoomRetrievalPage({
           <p className="text-xs text-neutral-500 leading-relaxed">
             {error || "This drop has expired, been deleted, or does not exist."}
             <br />
-            TempDrop automatically wipes expired files from storage to protect privacy.
+            doingdrop automatically wipes expired files from storage to protect privacy.
           </p>
           <div className="pt-2">
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 text-white rounded-lg text-xs font-semibold hover:bg-neutral-800 transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to TempDrop
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to doingdrop
             </Link>
           </div>
         </div>

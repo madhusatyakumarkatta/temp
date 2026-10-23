@@ -91,7 +91,7 @@ export async function GET(
     });
 
     const shortId = room.id.slice(0, 8);
-    const filename = `tempdrop-${shortId}.zip`;
+    const filename = `doingdrop-${shortId}.zip`;
 
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,

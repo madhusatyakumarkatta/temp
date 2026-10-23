@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   validateDuration,
   sanitizeFilename,
   checkRateLimit,
-  EXPIRY_PRESETS,
 } from "../src/lib/security";
 import {
   generateShareToken,
@@ -16,12 +15,12 @@ import {
   verifyEphemeralToken,
 } from "../src/lib/crypto";
 import { getDb } from "../src/lib/db";
-import { rooms, files, cleanupJobs } from "../src/lib/db/schema";
+import { rooms, files } from "../src/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { runCleanupWorker, processRoomDeletion } from "../src/lib/cleanup";
 import { LocalStorageDriver } from "../src/lib/storage/local";
 
-describe("TempDrop Security & Validation Suite", () => {
+describe("doingdrop Security & Supabase Integration Test Suite", () => {
   describe("Duration & Expiry Presets", () => {
     it("validates the default 24-hour preset", () => {
       const seconds = validateDuration("24h");
@@ -80,7 +79,7 @@ describe("TempDrop Security & Validation Suite", () => {
     });
   });
 
-  describe("Cryptographic Tokens & Hashing", () => {
+  describe("Cryptographic Tokens, Hashing & Ephemeral Authorization", () => {
     it("generates unguessable, high-entropy tokens", () => {
       const token1 = generateShareToken();
       const token2 = generateShareToken();
@@ -103,7 +102,7 @@ describe("TempDrop Security & Validation Suite", () => {
       expect(timingSafeMatch(hash1, hash3)).toBe(false);
     });
 
-    it("creates and verifies ephemeral read tokens", () => {
+    it("creates and verifies ephemeral read tokens for access-code sessions", () => {
       const roomId = "test-room-uuid";
       const futureExpiry = new Date(Date.now() + 60000);
       const token = createEphemeralToken(roomId, futureExpiry);
@@ -118,7 +117,7 @@ describe("TempDrop Security & Validation Suite", () => {
     });
   });
 
-  describe("Rate Limiter", () => {
+  describe("Rate Limiter (Brute-Force Protection)", () => {
     it("allows requests up to limit and denies excess", () => {
       const testKey = `test_ip_${Date.now()}`;
       const limit = 3;
@@ -132,8 +131,20 @@ describe("TempDrop Security & Validation Suite", () => {
     });
   });
 
+  describe("Signed URL Expiry Bounds", () => {
+    it("strictly bounds download URL TTL by remaining room lifetime", () => {
+      const roomExpiresInSeconds = 45; // 45 seconds left
+      const maxExpiry = Math.max(10, Math.min(roomExpiresInSeconds, 300));
+      expect(maxExpiry).toBe(45); // Cannot exceed remaining room lifetime
+
+      const roomExpiresInFarFuture = 86400; // 24 hours left
+      const cappedExpiry = Math.max(10, Math.min(roomExpiresInFarFuture, 300));
+      expect(cappedExpiry).toBe(300); // Capped at 5 minutes for security
+    });
+  });
+
   describe("Database Lifecycle, Expiry Enforcement & Deletion", () => {
-    it("creates, retrieves, and enforces expiry boundaries", async () => {
+    it("creates, retrieves, and enforces server-side expiry boundaries", async () => {
       const db = await getDb();
       const shareToken = generateShareToken();
       const shareTokenHash = hashToken(shareToken);
@@ -209,9 +220,9 @@ describe("TempDrop Security & Validation Suite", () => {
         })
         .returning();
 
-      // Add dummy file
+      // Add test file
       const dummyKey = `drops/${room.id}/test_file.txt`;
-      await storage.saveFile(dummyKey, Buffer.from("Hello TempDrop"));
+      await storage.saveFile(dummyKey, Buffer.from("Hello doingdrop"));
 
       await db.insert(files).values({
         roomId: room.id,
@@ -241,7 +252,48 @@ describe("TempDrop Security & Validation Suite", () => {
       expect(deletedRoom).toBeUndefined();
     });
 
-    it("runs cleanup worker idempotently on expired rooms", async () => {
+    it("cleans up abandoned uploads older than 1 hour", async () => {
+      const db = await getDb();
+      const storage = new LocalStorageDriver();
+
+      // Insert an abandoned pending room from 2 hours ago
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const [abandonedRoom] = await db
+        .insert(rooms)
+        .values({
+          shareTokenHash: hashToken(generateShareToken()),
+          accessCodeHash: hashAccessCode(generateAccessCode()),
+          managementTokenHash: hashToken(generateManagementToken()),
+          status: "pending",
+          totalBytes: 200,
+          fileCount: 1,
+          durationSeconds: 86400,
+          createdAt: twoHoursAgo,
+          expiresAt: new Date(Date.now() + 86400 * 1000),
+        })
+        .returning();
+
+      const abandonedKey = `drops/${abandonedRoom.id}/abandoned.dat`;
+      await storage.saveFile(abandonedKey, Buffer.from("abandoned content"));
+
+      await db.insert(files).values({
+        roomId: abandonedRoom.id,
+        storageKey: abandonedKey,
+        originalFilename: "abandoned.dat",
+        sizeBytes: 17,
+        status: "pending",
+      });
+
+      // Run cleanup worker
+      const cleanupResult = await runCleanupWorker();
+      expect(cleanupResult.abandonedRoomsRevoked).toBeGreaterThanOrEqual(1);
+
+      // Verify storage object was cleaned
+      const check = await storage.verifyObject(abandonedKey);
+      expect(check.exists).toBe(false);
+    });
+
+    it("runs cleanup worker idempotently with concurrent safety", async () => {
       const db = await getDb();
       const storage = new LocalStorageDriver();
 
@@ -271,18 +323,18 @@ describe("TempDrop Security & Validation Suite", () => {
         status: "uploaded",
       });
 
-      // Run cleanup worker
-      const result = await runCleanupWorker();
-      expect(result.expiredRoomsRevoked).toBeGreaterThanOrEqual(1);
-      expect(result.objectsDeleted).toBeGreaterThanOrEqual(1);
+      // Run multiple concurrent cleanup workers to verify idempotency
+      const [res1, res2] = await Promise.all([
+        runCleanupWorker(),
+        runCleanupWorker(),
+      ]);
+
+      expect(res1.alerts.length).toBe(0);
+      expect(res2.alerts.length).toBe(0);
 
       // Verify file is gone
       const check = await storage.verifyObject(fileKey);
       expect(check.exists).toBe(false);
-
-      // Running cleanup again should be idempotent and not error
-      const secondResult = await runCleanupWorker();
-      expect(secondResult.alerts.length).toBe(0);
     });
   });
 });

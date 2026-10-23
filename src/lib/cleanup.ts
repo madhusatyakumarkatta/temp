@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { rooms, files, cleanupJobs } from "./db/schema";
-import { eq, and, lte, or, inArray } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 import { getStorageDriver } from "./storage";
 
 export interface CleanupResult {

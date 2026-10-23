@@ -13,7 +13,7 @@ import {
   Loader2,
   ArrowLeft,
 } from "lucide-react";
-import { formatBytes, formatRemainingTime, formatDate } from "@/lib/format";
+import { formatBytes, formatRemainingTime } from "@/lib/format";
 import Link from "next/link";
 
 interface DropFile {
@@ -82,6 +82,7 @@ function RetrieveContent() {
     if (initialCode) {
       handleSubmit(undefined, initialCode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCode]);
 
   // Countdown timer

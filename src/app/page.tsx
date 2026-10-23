@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { ExpirySelector } from "@/components/ExpirySelector";
 import { UploadDropzone, UploadCompletePayload } from "@/components/UploadDropzone";
 import { ShareConfirmation } from "@/components/ShareConfirmation";
-import { Shield, Clock, Flame, ArrowRight, KeyRound } from "lucide-react";
+import { Shield, Clock, Flame, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {

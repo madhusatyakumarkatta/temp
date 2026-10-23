@@ -1,70 +1,86 @@
-# TempDrop — Privacy-First Temporary File Sharing Platform
+# doingdrop — Privacy-First Temporary File Sharing Platform
 
 > **"Upload. Share. Expire."**  
 > *Collect less. Store temporarily. Delete reliably.*
 
-TempDrop is a modern, production-oriented web platform designed for ephemeral file sharing without user accounts, sign-ups, tracking cookies, or persistent storage. Files are automatically and permanently deleted from private cloud object storage and databases upon reaching their server-enforced expiration time.
-
----
-
-## Key Features
-
-- **Zero Accounts or Profiling**: No login, registration, email collection, or behavioral tracking.
-- **Strict Server-Enforced Retention**: Expiry clocks run on the server in UTC; browser countdowns are purely visual. Expired drops return HTTP 410 (Gone) immediately.
-- **Direct Upload to Private Cloud Storage**: Built for Cloudflare R2 using AWS S3-compatible signed URLs, with automated fallback to local storage driver for zero-config development.
-- **Unguessable Cryptographic Tokens**: 192-bit base64url share tokens and 8-character human-friendly access codes (e.g., `7K9P-M2XQ`).
-- **One-Way Keyed Hashing**: Raw access codes, share tokens, and management secrets are never saved to the database. Stored as HMAC-SHA256 hashes with constant-time verification.
-- **Early Deletion Control**: Creators receive an unguessable private deletion credential to wipe a drop and its storage objects at any time before expiry.
-- **Dual Retrieval Paths**: Recipients can access files directly via unique link or by entering an access code.
-- **ZIP Download Bundle**: Download all files in a drop packaged as a single ZIP archive on the fly.
-- **Automated Cleanup Worker**: Scheduled background worker revokes expired drops, deletes S3/R2 objects, expunges database records, and retries failures with exponential backoff.
-- **Brute-Force Rate Limiting**: Sliding window rate-limiting on room creation, file downloads, and access code attempts (max 5 attempts per 5 minutes).
+doingdrop is a production-oriented, anonymous web application built on **Supabase** for temporary, privacy-first file sharing. Users can share files securely via unique URLs or access codes without accounts, logins, or tracking. When a drop reaches its server-enforced expiration time, access is instantly revoked, and files are permanently purged from Supabase Storage and PostgreSQL.
 
 ---
 
 ## Architecture & Technology Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS |
-| **Icons** | Lucide React |
-| **Backend API** | Next.js Server Route Handlers |
-| **Database & ORM** | PostgreSQL via Drizzle ORM (with in-process PGlite fallback for instant local dev) |
-| **Object Storage** | Cloudflare R2 (S3-compatible API via `@aws-sdk/client-s3`), with Local Storage Driver fallback |
-| **Validation** | Zod |
-| **Packaging** | JSZip (streamed ZIP bundles) |
-| **Testing** | Vitest (15 unit & integration tests) |
+| Component | Platform / Technology | Purpose |
+|---|---|---|
+| **Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS | Minimalist, responsive UI |
+| **Hosting** | Vercel | Edge routing and serverless execution |
+| **Database** | Supabase PostgreSQL with Row-Level Security (RLS) | High-speed, encrypted relational storage |
+| **Object Storage** | Supabase Storage (`doingdrop-files` private bucket) | Direct signed upload & download transfers |
+| **ORM** | Drizzle ORM | Type-safe PostgreSQL queries |
+| **Local Fallback** | PGlite (WebAssembly Postgres) & LocalStorageDriver | Zero-config offline development & testing |
+| **Validation** | Zod | Request & duration limit enforcement |
+| **Packaging** | JSZip | On-the-fly streaming ZIP downloads |
+| **Testing** | Vitest | 17 automated security and lifecycle tests |
+
+---
+
+## Key Features
+
+1. **No User Accounts or Tracking**:
+   - Zero registration, login, profiles, or cookies.
+   - Files are addressed solely by unguessable cryptographic tokens or access codes.
+2. **Pre-Upload Expiry Selection**:
+   - Presets: 10 minutes, 1 hour, 6 hours, 24 hours (default), 3 days, 7 days, or permitted custom duration (5 min to 7 days).
+   - Validated strictly on the server; expiry is computed in UTC when the upload finalizes.
+3. **Private Supabase Storage**:
+   - Private bucket (`doingdrop-files`) with all public read/write access disabled.
+   - Uploads use server-generated signed upload URLs.
+   - Downloads use short-lived signed URLs strictly bounded by remaining drop lifetime ($\le 300\text{s}$).
+4. **Row-Level Security (RLS)**:
+   - Tables (`rooms`, `files`, `cleanup_jobs`) have RLS enabled with default deny for anonymous and public access.
+   - Privileged operations execute server-side via `SUPABASE_SERVICE_ROLE_KEY` or direct pooled `DATABASE_URL`.
+5. **Cryptographic Protection**:
+   - Share Tokens: 192 bits of cryptographic entropy (`crypto.randomBytes(24)` in `base64url`).
+   - Access Codes: 8-character human-friendly codes (`XXXX-XXXX`) with 5-attempt rate-limiting.
+   - Management Tokens: 256 bits of cryptographic entropy for creator early deletion.
+   - Raw tokens are **never** stored in the database; only keyed HMAC-SHA256 hashes are persisted.
+6. **Dual Retrieval & ZIP Download**:
+   - Recipients can unlock files via direct URL (`/r/:token`) or by typing an access code at `/retrieve`.
+   - Download individual files or download all packaged as a single ZIP archive on demand.
+7. **Early Deletion**:
+   - Drop creators receive a private management link (`/manage/:token`) to permanently delete drops before scheduled expiry.
+8. **Automated Cleanup Worker**:
+   - Identifies expired drops and abandoned upload sessions ($>1\text{h}$).
+   - Immediately revokes access (HTTP 410 Gone).
+   - Issues physical delete commands to the Supabase Storage API (`supabase.storage.from('doingdrop-files').remove(keys)`).
+   - Removes database records and token hashes.
+   - Retries transient failures with bounded exponential backoff ($2^{\text{attempts}}$ minutes).
 
 ---
 
 ## Quickstart (Local Development)
 
-TempDrop includes zero-config local storage and database engines so you can run and test the complete application immediately without external cloud accounts.
+doingdrop includes zero-config local storage and in-process WebAssembly PostgreSQL drivers so that it runs immediately without external cloud accounts.
 
-### 1. Prerequisites
-- Node.js v18.17+ or v20+ (tested on Node.js 24)
-- npm or pnpm
-
-### 2. Installation
+### 1. Installation
 ```bash
-git clone <repo-url> tempdrop
-cd tempdrop
+git clone <repo-url> doingdrop
+cd doingdrop
 npm install
 ```
 
-### 3. Environment Setup
+### 2. Environment Setup
 ```bash
 cp .env.example .env.local
 ```
 *(No edits required to run locally with automatic local storage and in-process PGlite).*
 
-### 4. Run Automated Tests
+### 3. Run Automated Tests
 ```bash
 npm test
 ```
-All 15 security, cryptographic, expiry, and cleanup tests will execute and verify.
+Runs 17 automated tests covering validation, rate limiting, token hashing, early deletion, abandoned upload cleanup, and idempotency.
 
-### 5. Start Development Server
+### 4. Start Development Server
 ```bash
 npm run dev
 ```
@@ -72,67 +88,61 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## Cloud Services Setup & Deployment
+## Supabase Cloud Setup
 
-### 1. Cloudflare R2 (Private Object Storage)
-1. Log into your [Cloudflare Dashboard](https://dash.cloudflare.com/) and navigate to **R2**.
-2. Click **Create bucket** and name it (e.g. `tempdrop-files`).
-3. Ensure **Public Access is DISABLED** (default).
-4. Navigate to **Manage R2 API Tokens** and click **Create API token**:
-   - Permissions: **Object Read & Write**
-   - Bucket: select your bucket
-5. Copy your:
-   - Account ID
-   - Access Key ID
-   - Secret Access Key
-6. Set in your production environment variables:
+### 1. Create a Supabase Project
+1. Log into your [Supabase Dashboard](https://supabase.com/dashboard) and click **New project**.
+2. Select an organization, name your project (e.g. `doingdrop`), set a secure database password, and choose a region.
+
+### 2. Run Database Migrations & RLS
+1. In the Supabase Dashboard, navigate to the **SQL Editor**.
+2. Open the file [`supabase/migrations/20261023_doingdrop_init.sql`](supabase/migrations/20261023_doingdrop_init.sql) from this repository.
+3. Paste the contents into the SQL Editor and click **Run**.
+   - This creates `rooms`, `files`, and `cleanup_jobs` tables.
+   - Enables Row-Level Security (RLS) on all tables with explicit deny for public/anon access.
+   - Configures the private `doingdrop-files` storage bucket.
+
+### 3. Configure Environment Variables
+In your Supabase Dashboard:
+1. Navigate to **Project Settings > API**:
+   - Copy **Project URL** $\rightarrow$ `NEXT_PUBLIC_SUPABASE_URL`
+   - Copy **anon public key** $\rightarrow$ `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - Copy **service_role secret** $\rightarrow$ `SUPABASE_SERVICE_ROLE_KEY` *(Server-only)*
+2. Navigate to **Project Settings > Database**:
+   - Copy the **Connection String (URI)** $\rightarrow$ `DATABASE_URL` (use Session mode port 5432 or Transaction pooler port 6543)
+3. Generate high-entropy secrets for your environment:
    ```env
-   STORAGE_DRIVER="r2"
-   R2_ACCOUNT_ID="<your-cloudflare-account-id>"
-   R2_ACCESS_KEY_ID="<your-r2-access-key-id>"
-   R2_SECRET_ACCESS_KEY="<your-r2-secret-access-key>"
-   R2_BUCKET_NAME="tempdrop-files"
+   HASH_SECRET="<generate-random-32-byte-hex-string>"
+   CLEANUP_SECRET="<generate-random-cron-secret>"
    ```
-
-### 2. Managed PostgreSQL
-TempDrop works with any PostgreSQL 14+ database (such as Neon, Supabase, Vercel Postgres, or AWS RDS).
-1. Create a database instance in Neon or Supabase.
-2. Copy the connection string:
-   ```env
-   DATABASE_URL="postgresql://user:password@ep-host.neon.tech/tempdrop?sslmode=require"
-   ```
-3. Push schema migrations:
-   ```bash
-   npx drizzle-kit push
-   ```
-
-### 3. Vercel Deployment
-1. Import your repository into [Vercel](https://vercel.com).
-2. Add your environment variables in the Vercel Project Settings:
-   - `NEXT_PUBLIC_APP_URL`: Your custom production domain (e.g. `https://tempdrop.com`)
-   - `DATABASE_URL`
-   - `STORAGE_DRIVER`: `r2`
-   - `R2_ACCOUNT_ID`
-   - `R2_ACCESS_KEY_ID`
-   - `R2_SECRET_ACCESS_KEY`
-   - `R2_BUCKET_NAME`
-   - `HASH_SECRET`: Generate a 32+ character random string
-   - `CLEANUP_SECRET`: Generate a random key for cron invocation
-3. Deploy!
 
 ---
 
-## Scheduled Cleanup Worker Setup
+## Deployment to Vercel
 
-TempDrop enforces expiry immediately at request time, but physical deletion of object storage and database records is handled by the automated cleanup worker.
+1. Push your repository to GitHub or GitLab.
+2. In [Vercel](https://vercel.com), click **Add New > Project** and import your repository.
+3. In **Environment Variables**, configure:
+   - `NEXT_PUBLIC_APP_URL`: Your custom production domain (e.g. `https://doingdrop.com`)
+   - `STORAGE_DRIVER`: `supabase`
+   - `NEXT_PUBLIC_SUPABASE_URL`: `https://your-project.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: `your-anon-key`
+   - `SUPABASE_SERVICE_ROLE_KEY`: `your-service-role-key`
+   - `SUPABASE_STORAGE_BUCKET`: `doingdrop-files`
+   - `DATABASE_URL`: `postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres?sslmode=require`
+   - `HASH_SECRET`: Your 32+ character pepper secret
+   - `CLEANUP_SECRET`: Your cron worker authorization secret
+4. Click **Deploy**.
 
-### Endpoint
-`POST /api/cron/cleanup`  
-**Authentication Header**: `Authorization: Bearer <CLEANUP_SECRET>`  
-(or via URL parameter: `?secret=<CLEANUP_SECRET>`)
+---
+
+## Scheduled Cleanup Worker Configuration
+
+The cleanup endpoint is located at `POST /api/cron/cleanup`.  
+It requires authentication via `Authorization: Bearer <CLEANUP_SECRET>` or `?secret=<CLEANUP_SECRET>`.
 
 ### Option A: Vercel Cron (Recommended for Vercel)
-Add a `vercel.json` file in the root directory:
+Add a `vercel.json` file in your root directory:
 ```json
 {
   "crons": [
@@ -144,58 +154,41 @@ Add a `vercel.json` file in the root directory:
 }
 ```
 
-### Option B: Cloudflare Workers Cron or GitHub Actions
-Run a scheduled curl request every 10 minutes:
-```bash
-curl -X POST https://your-domain.com/api/cron/cleanup \
-  -H "Authorization: Bearer YOUR_CLEANUP_SECRET"
+### Option B: Supabase `pg_cron` & `pg_net`
+In Supabase SQL Editor:
+```sql
+-- Enable pg_cron and pg_net extensions
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- Schedule cleanup every 10 minutes
+SELECT cron.schedule(
+  'doingdrop-cleanup',
+  '*/10 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://your-domain.com/api/cron/cleanup',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer YOUR_CLEANUP_SECRET"}'::jsonb
+  );
+  $$
+);
 ```
 
-### Option C: Crontab (on a Linux Server)
-```cron
-*/10 * * * * curl -s -X POST https://your-domain.com/api/cron/cleanup -H "Authorization: Bearer YOUR_CLEANUP_SECRET" > /dev/null
-```
+### Option C: GitHub Actions or External Ping
+Trigger `POST https://your-domain.com/api/cron/cleanup` every 10 minutes from any scheduler.
 
 ---
 
-## Security & Privacy Controls
+## Privacy & Infrastructure Boundaries
 
-1. **Unguessable Entropy**:
-   - Share tokens: 192 bits of cryptographic entropy (`crypto.randomBytes(24)` base64url).
-   - Management tokens: 256 bits of cryptographic entropy (`crypto.randomBytes(32)`).
-   - Access codes: 31^8 = ~852 billion combinations formatted as `XXXX-XXXX` with strict 5-attempt rate-limiting.
-2. **Keyed Hashing**:
-   - Database stores only `HMAC-SHA256(token, HASH_SECRET)`.
-   - Constant-time verification (`crypto.timingSafeEqual`) prevents timing leaks.
-3. **Storage Isolation**:
-   - Files are stored under private paths: `drops/${roomId}/${fileId}_${sanitizedFilename}`.
-   - Public bucket access is completely disabled.
-   - Presigned upload URLs expire in 15 minutes.
-   - Presigned download URLs are capped to `min(300s, remaining_room_lifetime)`.
-4. **Filename Sanitization**:
-   - Strips directory traversal (`../`, `..\`).
-   - Removes control and null bytes.
-   - Prevents Windows reserved names (`CON`, `PRN`, `AUX`, `NUL`).
-   - Truncates oversized filenames to 200 characters while preserving extension.
-5. **Rate Limiting**:
-   - Room Creation: max 15 requests per 10 minutes per IP.
-   - Code Verification: max 5 attempts per 5 minutes per IP.
-   - Downloads: max 60 requests per minute per IP.
-
----
-
-## Troubleshooting Guide
-
-| Issue | Likely Cause | Solution |
-|---|---|---|
-| `Upload verification failed` | Upload was cancelled or storage credentials incorrect | Ensure files finished uploading before clicking finalize. Check R2 API token write permissions. |
-| `Too many access code attempts` | Rate limit triggered | Wait 5 minutes for the sliding window to reset. |
-| `This drop has expired` (HTTP 410) | Server clock passed `expiresAt` | Expected behavior: drops become completely inaccessible the second the timer elapses. |
-| `Database connection error` | `DATABASE_URL` unreachable or invalid | Check network access, SSL settings (`?sslmode=require`), or leave `DATABASE_URL` unset in local dev to use PGlite. |
-| `403 Forbidden` on early deletion | Incorrect management token | Ensure you are using the private creator management URL displayed on the upload confirmation screen. |
+doingdrop adheres to honest, transparent privacy practices:
+- **Zero Profiling**: No cookies, account databases, or persistent identifiers.
+- **Immediate Revocation**: The exact second `now >= expires_at`, all API endpoints return HTTP 410 (Gone).
+- **Physical Destruction**: Storage objects and database rows are purged by the cleanup worker.
+- **Infrastructure Retention**: While doingdrop permanently deletes data from active databases and storage buckets, cloud infrastructure providers (Supabase, AWS, Vercel) maintain routine disaster-recovery backups and network edge logs subject to standard enterprise lifecycles (typically 7–30 days).
 
 ---
 
 ## License
 
-MIT License. Built for ephemeral privacy and reliable data destruction.
+MIT License. Designed for privacy, security, and ephemeral data transfer.
