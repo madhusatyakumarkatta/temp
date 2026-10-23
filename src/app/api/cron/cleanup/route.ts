@@ -21,11 +21,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized. Secret required." }, { status: 401 });
     }
 
-    // Compare hash with timing safe match
+    // Compare hash with timing safe match against CLEANUP_SECRET or Vercel's automatic CRON_SECRET
     const providedHash = hashToken(providedSecret);
     const expectedHash = hashToken(env.CLEANUP_SECRET);
+    const vercelCronHash = process.env.CRON_SECRET ? hashToken(process.env.CRON_SECRET) : null;
 
-    if (!timingSafeMatch(providedHash, expectedHash)) {
+    const isAuthorized =
+      timingSafeMatch(providedHash, expectedHash) ||
+      (vercelCronHash !== null && timingSafeMatch(providedHash, vercelCronHash));
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Forbidden. Invalid secret." }, { status: 403 });
     }
 
