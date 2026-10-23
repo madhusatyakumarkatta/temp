@@ -1,3 +1,4 @@
+import "server-only";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -10,7 +11,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().default("doingdrop-files"),
 
-  // Secrets & Hashes
+  // Secrets & Hashes (strict in production, safe defaults for offline local tests)
   HASH_SECRET: z.string().min(16).default("doingdrop-dev-hash-secret-minimum-32-chars-long!"),
   CLEANUP_SECRET: z.string().min(8).default("doingdrop-cleanup-dev-key"),
 
@@ -50,7 +51,17 @@ try {
     MAX_EXPIRY_SECONDS: process.env.MAX_EXPIRY_SECONDS,
     MIN_EXPIRY_SECONDS: process.env.MIN_EXPIRY_SECONDS,
   });
+
+  if (process.env.NODE_ENV === "production") {
+    if (parsedEnv.HASH_SECRET === "doingdrop-dev-hash-secret-minimum-32-chars-long!") {
+      console.warn("WARNING: HASH_SECRET is using the development fallback. Set a unique random 32-byte secret in production!");
+    }
+  }
 } catch (error) {
+  if (process.env.NODE_ENV === "production") {
+    console.error("FATAL: Environment configuration error in production:", error);
+    throw new Error("Invalid production environment configuration: " + String(error));
+  }
   console.error("Environment configuration error:", error);
   parsedEnv = envSchema.parse({});
 }

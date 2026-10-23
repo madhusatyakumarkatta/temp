@@ -1,3 +1,4 @@
+import "server-only";
 import { StorageDriver, UploadTarget } from "./types";
 import { getSupabaseAdminClient } from "../supabase/server";
 import { env } from "../env";

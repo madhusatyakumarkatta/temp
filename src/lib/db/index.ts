@@ -1,3 +1,4 @@
+import "server-only";
 import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import postgres from "postgres";
