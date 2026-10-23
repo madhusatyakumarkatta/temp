@@ -1,6 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "TempDrop — Privacy-First Temporary File Sharing",
@@ -8,7 +13,6 @@ export const metadata: Metadata = {
     "Upload and share files temporarily without accounts or tracking. Files expire and are permanently deleted from storage.",
   keywords: ["temporary file sharing", "private file transfer", "ephemeral storage", "no account upload"],
   authors: [{ name: "TempDrop" }],
-  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
