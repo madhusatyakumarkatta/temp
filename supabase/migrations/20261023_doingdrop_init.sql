@@ -64,10 +64,11 @@ ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cleanup_jobs ENABLE ROW LEVEL SECURITY;
 
--- Explicitly drop existing permissive policies if re-running
-DROP POLICY IF EXISTS "Deny all anon select on rooms" ON rooms;
-DROP POLICY IF EXISTS "Deny all anon select on files" ON files;
-DROP POLICY IF EXISTS "Deny all anon select on cleanup_jobs" ON cleanup_jobs;
+-- Explicitly drop existing policies if re-running (idempotent migration)
+DROP POLICY IF EXISTS "Service role full access on rooms" ON rooms;
+DROP POLICY IF EXISTS "Service role full access on files" ON files;
+DROP POLICY IF EXISTS "Service role full access on cleanup_jobs" ON cleanup_jobs;
+DROP POLICY IF EXISTS "Service role full access to doingdrop-files" ON storage.objects;
 
 -- Service role full access policies
 CREATE POLICY "Service role full access on rooms"
