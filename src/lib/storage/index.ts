@@ -1,5 +1,5 @@
 import { StorageDriver } from "./types";
-import { R2StorageDriver } from "./r2";
+import { SupabaseStorageDriver } from "./supabase";
 import { LocalStorageDriver } from "./local";
 import { env } from "../env";
 
@@ -10,15 +10,12 @@ export function getStorageDriver(): StorageDriver {
     return cachedDriver;
   }
 
-  const hasR2Config = Boolean(
-    env.R2_ACCOUNT_ID &&
-      env.R2_ACCESS_KEY_ID &&
-      env.R2_SECRET_ACCESS_KEY &&
-      env.R2_BUCKET_NAME
+  const hasSupabaseConfig = Boolean(
+    env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
   );
 
-  if (env.STORAGE_DRIVER === "r2" && hasR2Config) {
-    cachedDriver = new R2StorageDriver();
+  if (env.STORAGE_DRIVER === "supabase" && hasSupabaseConfig) {
+    cachedDriver = new SupabaseStorageDriver();
   } else {
     cachedDriver = new LocalStorageDriver();
   }

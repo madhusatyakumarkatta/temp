@@ -12,9 +12,8 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.758.0",
-    "@aws-sdk/s3-request-presigner": "^3.758.0",
     "@electric-sql/pglite": "^0.2.14",
+    "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.39.3",
     "jszip": "^3.10.1",

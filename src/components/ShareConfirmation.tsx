@@ -128,7 +128,7 @@ export function ShareConfirmation({ payload, onReset }: ShareConfirmationProps) 
         <div className="space-y-2">
           <label className="text-xs font-semibold text-neutral-700 flex items-center justify-between">
             <span>Access Code</span>
-            <span className="text-[11px] text-neutral-600 font-normal">Method 2 of 2 (enter on tempdrop)</span>
+            <span className="text-[11px] text-neutral-600 font-normal">Method 2 of 2 (enter on doingdrop)</span>
           </label>
           <div className="flex items-center gap-2">
             <div className="flex-1 px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center justify-between font-mono text-sm tracking-wider font-bold text-neutral-900">
@@ -154,7 +154,7 @@ export function ShareConfirmation({ payload, onReset }: ShareConfirmationProps) 
             type="button"
             onClick={() =>
               copyToClipboard(
-                `TempDrop File Share\nLink: ${shareUrl}\nAccess Code: ${payload.accessCode}\nExpires: ${formatDate(payload.expiresAt)}`,
+                `doingdrop File Share\nLink: ${shareUrl}\nAccess Code: ${payload.accessCode}\nExpires: ${formatDate(payload.expiresAt)}`,
                 "both"
               )
             }

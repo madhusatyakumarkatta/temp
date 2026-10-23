@@ -8,11 +8,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "TempDrop — Privacy-First Temporary File Sharing",
+  title: "doingdrop — Privacy-First Temporary File Sharing",
   description:
-    "Upload and share files temporarily without accounts or tracking. Files expire and are permanently deleted from storage.",
-  keywords: ["temporary file sharing", "private file transfer", "ephemeral storage", "no account upload"],
-  authors: [{ name: "TempDrop" }],
+    "Upload and share files temporarily without accounts or tracking. Powered by Supabase. Files expire and are permanently deleted from storage.",
+  keywords: ["temporary file sharing", "private file transfer", "ephemeral storage", "no account upload", "supabase storage"],
+  authors: [{ name: "doingdrop" }],
 };
 
 export default function RootLayout({
@@ -27,11 +27,11 @@ export default function RootLayout({
           <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-sm tracking-tight shadow-sm transition-transform group-hover:scale-105">
-                TD
+                DD
               </div>
               <div>
                 <span className="font-semibold text-base text-neutral-950 tracking-tight">
-                  TempDrop
+                  doingdrop
                 </span>
                 <span className="hidden sm:inline-block ml-2.5 text-xs text-neutral-600 font-normal border-l border-neutral-200 pl-2.5">
                   Upload. Share. Expire.
@@ -67,7 +67,7 @@ export default function RootLayout({
         <footer className="border-t border-neutral-200 bg-white py-8 mt-16">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-              <span className="font-medium text-neutral-700">TempDrop</span>
+              <span className="font-medium text-neutral-700">doingdrop</span>
               <span>•</span>
               <span>Collect less. Store temporarily. Delete reliably.</span>
             </div>

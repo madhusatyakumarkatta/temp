@@ -72,7 +72,7 @@ function ManageContent({ token }: { token: string }) {
                   href="/"
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 text-white rounded-lg text-xs font-semibold hover:bg-neutral-800 transition-colors"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" /> Return to TempDrop
+                  <ArrowLeft className="w-3.5 h-3.5" /> Return to doingdrop
                 </Link>
               </div>
             </div>

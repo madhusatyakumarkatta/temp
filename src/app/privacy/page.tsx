@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Shield, Clock, HardDrive, Trash2, ArrowLeft, Lock } from "lucide-react";
 
 export const metadata = {
-  title: "Privacy & Deletion Policy — TempDrop",
+  title: "Privacy & Deletion Policy — doingdrop",
   description:
-    "How TempDrop handles file retention, cryptographic access, automatic deletion, and infrastructure boundaries.",
+    "How doingdrop handles file retention, cryptographic access, Supabase Storage isolation, automatic deletion, and infrastructure boundaries.",
 };
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
             href="/"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors mb-4"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to TempDrop
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to doingdrop
           </Link>
           <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
             Privacy & Deletion Policy
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
               Core Principle: Collect Less. Store Temporarily. Delete Reliably.
             </h2>
             <p className="mt-1 text-neutral-600 text-xs sm:text-sm">
-              TempDrop is designed from the ground up for minimal data footprint. There are no user
+              doingdrop is designed from the ground up for minimal data footprint. There are no user
               accounts, no tracking pixels, no advertising networks, and no permanent storage.
             </p>
           </div>
@@ -61,6 +61,7 @@ export default function PrivacyPage() {
             <p className="text-neutral-600 text-xs">
               Raw access tokens, share tokens, and management credentials are <strong>never stored in plain text</strong> in our database.
               We only store keyed cryptographic HMAC-SHA256 hashes. Verification is performed using constant-time string comparisons to eliminate timing attack vectors.
+              PostgreSQL Row-Level Security (RLS) denies all direct anonymous public reads to room and file metadata.
             </p>
           </div>
 
@@ -81,11 +82,11 @@ export default function PrivacyPage() {
           <div className="space-y-2">
             <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-neutral-700" />
-              4. Private Cloud Object Storage
+              4. Private Supabase Cloud Storage
             </h3>
             <p className="text-neutral-600 text-xs">
-              Files are stored in private Cloudflare R2 / S3 buckets with all public read and write access permanently disabled.
-              Direct transfers happen over TLS 1.3 using narrowly scoped signed URLs. No file is accessible through predictable, permanent, or guessable public paths.
+              Files are stored in private Supabase Storage buckets (<code>doingdrop-files</code>) with all public read and write access permanently disabled.
+              Transfers happen over TLS 1.3 using narrowly scoped, short-lived signed URLs generated on demand. No file is accessible through predictable, permanent, or guessable public paths.
             </p>
           </div>
 
@@ -100,7 +101,7 @@ export default function PrivacyPage() {
             </p>
             <ol className="list-decimal pl-5 space-y-1 text-neutral-600 text-xs">
               <li>Expired rooms and abandoned upload sessions have their access revoked immediately.</li>
-              <li>All associated storage objects are permanently deleted via API commands.</li>
+              <li>All associated storage objects are permanently deleted via the Supabase Storage API.</li>
               <li>Database records and token hashes are deleted.</li>
               <li>Failed deletions are placed on a durable retry queue with bounded exponential backoff.</li>
             </ol>
@@ -113,8 +114,8 @@ export default function PrivacyPage() {
             </h3>
             <p className="text-neutral-600 text-xs leading-relaxed">
               We do not make irresponsible marketing claims like &ldquo;zero trace&rdquo; or &ldquo;impossible to hack.&rdquo;
-              While TempDrop permanently purges your files and records from active storage and databases, cloud infrastructure providers
-              (such as Cloudflare, AWS, or Vercel) maintain short-term network edge logs and disaster-recovery backup snapshots according to their standard enterprise lifecycle policies.
+              While doingdrop permanently purges your files and records from active Supabase Storage and databases upon expiry, cloud infrastructure providers
+              (such as Supabase, AWS, or Vercel) maintain short-term network edge logs and disaster-recovery backup snapshots according to their standard enterprise lifecycle policies.
             </p>
           </div>
         </div>

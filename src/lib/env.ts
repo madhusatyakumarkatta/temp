@@ -2,18 +2,17 @@ import { z } from "zod";
 
 const envSchema = z.object({
   DATABASE_URL: z.string().optional(),
-  STORAGE_DRIVER: z.enum(["r2", "local"]).default("local"),
+  STORAGE_DRIVER: z.enum(["supabase", "local"]).default("local"),
   
-  // Cloudflare R2 / S3 Config
-  R2_ACCOUNT_ID: z.string().optional(),
-  R2_ACCESS_KEY_ID: z.string().optional(),
-  R2_SECRET_ACCESS_KEY: z.string().optional(),
-  R2_BUCKET_NAME: z.string().optional(),
-  R2_PUBLIC_URL: z.string().optional(),
+  // Supabase Configuration
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_STORAGE_BUCKET: z.string().default("doingdrop-files"),
 
   // Secrets & Hashes
-  HASH_SECRET: z.string().min(16).default("tempdrop-dev-hash-secret-minimum-32-chars-long!"),
-  CLEANUP_SECRET: z.string().min(8).default("tempdrop-cleanup-dev-key"),
+  HASH_SECRET: z.string().min(16).default("doingdrop-dev-hash-secret-minimum-32-chars-long!"),
+  CLEANUP_SECRET: z.string().min(8).default("doingdrop-cleanup-dev-key"),
 
   // Application limits
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
@@ -32,12 +31,15 @@ let parsedEnv: Env;
 try {
   parsedEnv = envSchema.parse({
     DATABASE_URL: process.env.DATABASE_URL,
-    STORAGE_DRIVER: process.env.STORAGE_DRIVER || (process.env.R2_ACCESS_KEY_ID ? "r2" : "local"),
-    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
-    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
-    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
-    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
-    R2_PUBLIC_URL: process.env.R2_PUBLIC_URL,
+    STORAGE_DRIVER:
+      process.env.STORAGE_DRIVER ||
+      (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+        ? "supabase"
+        : "local"),
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET || "doingdrop-files",
     HASH_SECRET: process.env.HASH_SECRET,
     CLEANUP_SECRET: process.env.CLEANUP_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
@@ -50,7 +52,6 @@ try {
   });
 } catch (error) {
   console.error("Environment configuration error:", error);
-  // Fall back to defaults for development
   parsedEnv = envSchema.parse({});
 }
 
